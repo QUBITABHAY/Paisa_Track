@@ -1,9 +1,18 @@
+# Dependencies
 node_modules
-# Keep environment variables out of version control
-.env
+node_modules/
 
+# Environment variables - Keep out of version control
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# Prisma
 /src/generated/prisma
-/src/migrations
+/prisma/migrations
 /prisma/dev.db
 .DS_Store
 package-lock.json
