@@ -1,13 +1,18 @@
 import express from 'express';
 import dotenv from 'dotenv';
+import cors from 'cors';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors());
+
 app.get('/', (req, res) => {
-  res.send('Hello, World!');
+  res.json({ message: 'Paisa Track API is running!', version: '1.0.0' });
 });
 
 import routes from "./routes/index.js";
