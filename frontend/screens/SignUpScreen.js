@@ -73,7 +73,7 @@ const SignUpScreen = ({ navigation }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: username,
+          name: username,
           email: email,
           password: password,
         }),
