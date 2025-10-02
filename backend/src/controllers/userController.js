@@ -1,4 +1,4 @@
-import prisma from "../DB/db.config.js";
+import prisma from "../config/db.config.js";
 import bcrypt from "bcryptjs";
 
 export const createUser = async (req, res) => {

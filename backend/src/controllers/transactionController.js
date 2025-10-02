@@ -1,4 +1,4 @@
-import prisma from "../DB/db.config.js";
+import prisma from "../config/db.config.js";
 
 export const createTransaction = async (req, res) => {
     try {

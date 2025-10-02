@@ -71,7 +71,7 @@ const LoginScreen = ({ navigation }) => {
         Alert.alert("Success", "Welcome back!", [
           {
             text: "OK",
-            onPress: () => navigation.replace("homepage"), // change
+            onPress: () => navigation.replace("Dashboard"),
           },
         ]);
       } else {
