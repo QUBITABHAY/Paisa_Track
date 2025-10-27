@@ -43,7 +43,7 @@ export const googleAuth = async (req, res) => {
       });
     }
 
-    let user = await prisma.user.findFirst({
+    let user = await prisma.users.findFirst({
       where: {
         OR: [{ googleId: googleId }, { email: email }],
       },
@@ -51,7 +51,7 @@ export const googleAuth = async (req, res) => {
 
     if (user) {
       if (!user.googleId) {
-        user = await prisma.user.update({
+        user = await prisma.users.update({
           where: { id: user.id },
           data: {
             googleId: googleId,
@@ -61,7 +61,7 @@ export const googleAuth = async (req, res) => {
         });
       }
     } else {
-      user = await prisma.user.create({
+      user = await prisma.users.create({
         data: {
           username: name,
           email: email,
@@ -137,7 +137,7 @@ export const linkGoogleAccount = async (req, res) => {
     const payload = ticket.getPayload();
     const { sub: googleId, picture: avatar } = payload;
 
-    const existingUser = await prisma.user.findFirst({
+    const existingUser = await prisma.users.findFirst({
       where: { googleId: googleId },
     });
 
@@ -148,7 +148,7 @@ export const linkGoogleAccount = async (req, res) => {
       });
     }
 
-    const updatedUser = await prisma.user.update({
+    const updatedUser = await prisma.users.update({
       where: { id: userId },
       data: {
         googleId: googleId,
@@ -183,7 +183,7 @@ export const unlinkGoogleAccount = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const updatedUser = await prisma.user.update({
+    const updatedUser = await prisma.users.update({
       where: { id: userId },
       data: {
         googleId: null,
@@ -226,7 +226,7 @@ export const refreshToken = async (req, res) => {
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
     const userId = decoded.userId;
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: userId },
     });
 

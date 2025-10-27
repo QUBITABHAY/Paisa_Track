@@ -29,9 +29,9 @@ const LoginScreen = ({ navigation }) => {
     const newErrors = {};
 
     if (!username.trim()) {
-      newErrors.username = "Username is required";
-    } else if (username.length < 3) {
-      newErrors.username = "Username must be at least 3 characters";
+      newErrors.username = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username)) {
+      newErrors.username = "Please enter a valid email address";
     }
 
     if (!password) {
@@ -81,29 +81,28 @@ const LoginScreen = ({ navigation }) => {
       setIsLoading(false);
       console.error("Login error:", error);
 
-      if (username.toLowerCase() === "admin" && password === "password") {
+      if (username.toLowerCase() === "test@test.com" && password === "testpass123") {
         Alert.alert("Demo Login", "Logged in with demo credentials", [
           {
             text: "OK",
-            onPress: () => navigation.replace("homepage"), // change
+            onPress: () => navigation.replace("Dashboard"),
           },
         ]);
       } else {
         Alert.alert(
           "Error",
-          "Network error. Try demo credentials (admin/password)"
+          "Network error. Try demo credentials (test@test.com/testpass123)"
         );
       }
     }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gradient-to-br from-blue-50 to-indigo-100">
+    <SafeAreaView className="flex-1 bg-blue-50">
       <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView
@@ -224,14 +223,11 @@ const LoginScreen = ({ navigation }) => {
               >
                 <View className="flex-row items-center justify-center">
                   {isLoading && (
-                    <View
-                      className="flex-row items-center justify-center"
-                      style={{
-                        transform: [{ rotate: isLoading ? "360deg" : "0deg" }],
-                      }}
-                    />
+                    <View className="mr-2">
+                      <Ionicons name="refresh-outline" size={20} color="#374151" />
+                    </View>
                   )}
-                  <Text className="text-gray-700 font-semibold text-base ml-3">
+                  <Text className="text-gray-700 font-semibold text-base">
                     {isLoading ? "Signing In..." : "Sign In"}
                   </Text>
                 </View>
@@ -284,7 +280,7 @@ const LoginScreen = ({ navigation }) => {
                 <Text className="text-gray-600 text-base">
                   Don't have an account?{" "}
                 </Text>
-                <TouchableOpacity onPress={() => navigation.navigate('SignIn')}>
+                <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
                   <Text className="text-blue-600 font-semibold text-base">
                     Sign Up
                   </Text>

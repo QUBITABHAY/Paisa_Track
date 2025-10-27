@@ -14,7 +14,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
+model Users {
   id            Int      @id @default(autoincrement())
   username      String?
   email         String   @unique
@@ -36,5 +36,5 @@ model Transaction {
   description String?
   date DateTime @default(now())
   userId Int
-  user User @relation(fields: [userId], references: [id])
+  user Users @relation(fields: [userId], references: [id])
 }

@@ -19,7 +19,7 @@ export const createUser = async (req, res) => {
       });
     }
 
-    const findUser = await prisma.user.findUnique({
+    const findUser = await prisma.users.findUnique({
       where: {
         email: email.toLowerCase(),
       },
@@ -32,9 +32,9 @@ export const createUser = async (req, res) => {
       });
     }
 
-    const data = await prisma.user.create({
+    const data = await prisma.users.create({
       data: {
-        name: name.trim(),
+        username: name.trim(),
         email: email.toLowerCase(),
         password: await bcrypt.hash(password, 12),
       },
@@ -67,7 +67,7 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: {
         email: email.toLowerCase(),
       },
@@ -111,7 +111,7 @@ export const getUser = async (req, res) => {
   try {
     let { getEmail, getPassword } = req.body;
 
-    const checkDetil = await prisma.user.findUnique({
+    const checkDetil = await prisma.users.findUnique({
       where: {
         email: getEmail,
       },
@@ -140,7 +140,7 @@ export const getUser = async (req, res) => {
 export const deleteUser = async (req, res) => {
   try {
     const { email } = req.body;
-    const result = await prisma.user.delete({ where: { email } });
+    const result = await prisma.users.delete({ where: { email } });
     if (!result) {
       res.send({ message: "Invalid User" });
     }
