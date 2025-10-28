@@ -1,20 +1,43 @@
-import express from 'express';
-import { googleAuth, linkGoogleAccount, unlinkGoogleAccount, refreshToken } from '../controllers/authController.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { Router } from "express";
+import passport from "../config/passport.config.js";
+import {
+  googleAuthSuccess,
+  googleAuthFailure,
+  googleAuthCallback,
+  logout,
+  getCurrentUser,
+} from "../controllers/authController.js";
 
-const router = express.Router();
+const router = Router();
 
-router.post('/google', googleAuth);
+router.get(
+  "/google",
+  passport.authenticate("google", { scope: ["profile", "email"] }),
+);
 
-router.post('/link-google', authenticateToken, linkGoogleAccount);
-router.post('/unlink-google', authenticateToken, unlinkGoogleAccount);
-router.post('/refresh-token', refreshToken);
+router.get(
+  "/google/callback",
+  passport.authenticate("google", {
+    failureRedirect: "/api/auth/google/failure",
+    session: true,
+  }),
+  googleAuthSuccess,
+);
 
-router.post('/logout', authenticateToken, (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Logged out successfully'
-  });
-});
+router.get(
+  "/google/callback/json",
+  passport.authenticate("google", {
+    failureRedirect: "/api/auth/google/failure",
+    session: false,
+  }),
+  googleAuthCallback,
+);
+
+router.get("/google/failure", googleAuthFailure);
+
+router.post("/logout", logout);
+router.get("/logout", logout);
+
+router.get("/me", getCurrentUser);
 
 export default router;
