@@ -21,30 +21,103 @@ const generateToken = (user) => {
 export const googleAuthSuccess = async (req, res) => {
   try {
     if (!req.user) {
+      // Try to get mobile flag from state parameter
+      let isMobileApp = false;
+      if (req.query.state) {
+        try {
+          const state = JSON.parse(req.query.state);
+          isMobileApp = state.mobile === true;
+        } catch (e) {
+          console.error('Error parsing state:', e);
+        }
+      }
+      
+      const appScheme = process.env.APP_SCHEME || 'paisatrack';
+      
+      if (isMobileApp) {
+        return res.redirect(`${appScheme}://auth/callback?error=authentication_failed`);
+      }
+      
       return res.redirect(
         `${process.env.FRONTEND_URL || "http://localhost:8081"}/login?error=authentication_failed`,
       );
     }
 
     const token = generateToken(req.user);
-
     const { password, ...userWithoutPassword } = req.user;
 
+    // Try to get mobile flag from state parameter
+    let isMobileApp = false;
+    if (req.query.state) {
+      try {
+        const state = JSON.parse(req.query.state);
+        isMobileApp = state.mobile === true;
+        console.log('Parsed state from OAuth:', state);
+      } catch (e) {
+        console.error('Error parsing state:', e);
+      }
+    }
+    
+    const appScheme = process.env.APP_SCHEME || 'paisatrack';
+    
+    console.log('OAuth Success - isMobileApp:', isMobileApp, 'State:', req.query.state);
+    
+    if (isMobileApp) {
+      // For mobile, redirect to app scheme - WebBrowser will capture this
+      const callbackUrl = `${appScheme}://auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(userWithoutPassword))}`;
+      console.log('Redirecting to mobile app:', callbackUrl);
+      return res.redirect(callbackUrl);
+    }
+
+    // For web, redirect to frontend
     res.redirect(
       `${process.env.FRONTEND_URL || "http://localhost:8081"}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(userWithoutPassword))}`,
     );
   } catch (error) {
     console.error("Google auth success error:", error);
+    
+    // Try to get mobile flag from state parameter
+    let isMobileApp = false;
+    if (req.query.state) {
+      try {
+        const state = JSON.parse(req.query.state);
+        isMobileApp = state.mobile === true;
+      } catch (e) {
+        // Ignore parsing errors
+      }
+    }
+    
+    const appScheme = process.env.APP_SCHEME || 'paisatrack';
+    
+    if (isMobileApp) {
+      return res.redirect(`${appScheme}://auth/callback?error=server_error`);
+    }
+    
     res.redirect(
       `${process.env.FRONTEND_URL || "http://localhost:8081"}/login?error=server_error`,
     );
   }
-};
-
-export const googleAuthFailure = (req, res) => {
-  res.redirect(
-    `${process.env.FRONTEND_URL || "http://localhost:8081"}/login?error=google_auth_failed`,
-  );
+};export const googleAuthFailure = (req, res) => {
+  // Try to get mobile flag from state parameter
+  let isMobileApp = false;
+  if (req.query.state) {
+    try {
+      const state = JSON.parse(req.query.state);
+      isMobileApp = state.mobile === true;
+    } catch (e) {
+      // Ignore parsing errors
+    }
+  }
+  
+  const appScheme = process.env.APP_SCHEME || 'paisatrack';
+  
+  if (isMobileApp) {
+    res.redirect(`${appScheme}://auth/callback?error=google_auth_failed`);
+  } else {
+    res.redirect(
+      `${process.env.FRONTEND_URL || "http://localhost:8081"}/login?error=google_auth_failed`,
+    );
+  }
 };
 
 export const logout = (req, res) => {

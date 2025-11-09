@@ -1,314 +1,371 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
+  TextInput,
   TouchableOpacity,
+  ScrollView,
   StatusBar,
   Alert,
-  TextInput,
   ActivityIndicator,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-
-
-const Card = ({ children, className = '' }) => (
-  <View className={`bg-white rounded-2xl p-4 shadow-sm border border-gray-100 ${className}`}>
-    {children}
-  </View>
-);
-
-const Input = ({ label, value, onChangeText, placeholder, icon, error, keyboardType, className = '', ...rest }) => (
-  <View className={`${className} mb-4`}>
-    {label && <Text className="text-gray-700 font-semibold mb-2">{label}</Text>}
-    <View className={`flex-row items-center bg-white rounded-xl px-4 py-3 border-2 ${error ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}>
-      {icon && <Ionicons name={icon} size={20} color="#6B7280" />}
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor="#9CA3AF"
-        className="flex-1 ml-3 text-gray-800"
-        keyboardType={keyboardType}
-        {...rest}
-      />
-    </View>
-    {error && <Text className="text-red-500 text-sm mt-2 ml-1">{error}</Text>}
-  </View>
-);
-
-const Button = ({ title, onPress, loading, icon, size = 'medium', className = '' }) => (
-  <TouchableOpacity
-    onPress={onPress}
-    disabled={loading}
-    className={`bg-blue-500 rounded-2xl py-3 px-4 items-center justify-center ${className}`}
-    activeOpacity={0.8}
-  >
-    <View className="flex-row items-center justify-center">
-      {loading && (
-        <ActivityIndicator size="small" color="#fff" className="mr-2" />
-      )}
-      <Text className="text-white font-semibold">{loading ? `${title}...` : title}</Text>
-    </View>
-  </TouchableOpacity>
-);
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 const AddTransactionScreen = ({ navigation }) => {
-  const [formData, setFormData] = useState({
-    amount: "",
-    description: "",
-    category: "",
-    date: new Date().toISOString().split('T')[0],
-    type: "debit", // debit or credit
-    paymentMethod: "UPI",
-  });
+  const [transactionType, setTransactionType] = useState('expense');
+  const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [transactionDate, setTransactionDate] = useState(
+    new Date().toISOString().split('T')[0]
+  );
+  const [paymentMode, setPaymentMode] = useState('UPI');
+  const [loading, setLoading] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
 
-  const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
-
-  const categories = [
-    { id: "food", name: "Food & Dining", icon: "restaurant", color: "#FF6B6B" },
-    { id: "transport", name: "Transport", icon: "car", color: "#4ECDC4" },
-    { id: "shopping", name: "Shopping", icon: "bag", color: "#45B7D1" },
-    { id: "bills", name: "Bills & Utilities", icon: "receipt", color: "#96CEB4" },
-    { id: "entertainment", name: "Entertainment", icon: "game-controller", color: "#FFEAA7" },
-    { id: "health", name: "Health & Fitness", icon: "fitness", color: "#FD79A8" },
-    { id: "education", name: "Education", icon: "book", color: "#A29BFE" },
-    { id: "income", name: "Income", icon: "trending-up", color: "#00B894" },
-    { id: "other", name: "Other", icon: "ellipsis-horizontal", color: "#636E72" },
+  const expenseCategories = [
+    { id: 'food', label: 'Food', icon: 'fast-food', color: '#FF6B6B' },
+    { id: 'transport', label: 'Transport', icon: 'car', color: '#4ECDC4' },
+    { id: 'shopping', label: 'Shopping', icon: 'cart', color: '#45B7D1' },
+    { id: 'bills', label: 'Bills', icon: 'document-text', color: '#96CEB4' },
+    { id: 'entertainment', label: 'Entertainment', icon: 'musical-notes', color: '#FFEAA7' },
+    { id: 'health', label: 'Health', icon: 'medical', color: '#FD79A8' },
+    { id: 'education', label: 'Education', icon: 'school', color: '#A29BFE' },
+    { id: 'other', label: 'Other', icon: 'apps', color: '#636E72' },
   ];
 
-  const paymentMethods = ["UPI", "Card", "Cash", "Net Banking", "Wallet"];
+  const incomeCategories = [
+    { id: 'salary', label: 'Salary', icon: 'cash', color: '#00B894' },
+    { id: 'freelance', label: 'Freelance', icon: 'laptop', color: '#6C5CE7' },
+    { id: 'investment', label: 'Investment', icon: 'trending-up', color: '#0984E3' },
+    { id: 'business', label: 'Business', icon: 'business', color: '#FDCB6E' },
+    { id: 'gift', label: 'Gift', icon: 'gift', color: '#E17055' },
+    { id: 'refund', label: 'Refund', icon: 'refresh', color: '#74B9FF' },
+    { id: 'other', label: 'Other', icon: 'apps', color: '#636E72' },
+  ];
 
-  const validateForm = () => {
-    const newErrors = {};
-    
-    if (!formData.amount || isNaN(formData.amount) || parseFloat(formData.amount) <= 0) {
-      newErrors.amount = "Please enter a valid amount";
+  const paymentModes = ['UPI', 'Card', 'Cash', 'Net Banking', 'Wallet'];
+
+  const activeCategories = transactionType === 'expense' ? expenseCategories : incomeCategories;
+
+  const validateInputs = () => {
+    const errors = {};
+
+    if (!amount || parseFloat(amount) <= 0 || isNaN(amount)) {
+      errors.amount = 'Enter a valid amount';
     }
-    
-    if (!formData.description.trim()) {
-      newErrors.description = "Description is required";
+
+    if (!description.trim()) {
+      errors.description = 'Description is required';
     }
-    
-    if (!formData.category) {
-      newErrors.category = "Please select a category";
+
+    if (!selectedCategory) {
+      errors.category = 'Please select a category';
     }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
-  const handleSave = async () => {
-    if (!validateForm()) return;
-    
-    setIsLoading(true);
-    
+  const handleSubmit = async () => {
+    if (!validateInputs()) return;
+
+    setLoading(true);
+
     // Simulate API call
     setTimeout(() => {
-      setIsLoading(false);
+      setLoading(false);
       Alert.alert(
-        "Success",
-        "Transaction added successfully!",
+        'Success',
+        'Transaction saved successfully!',
         [
           {
-            text: "Add Another",
-            onPress: () => {
-              setFormData({
-                amount: "",
-                description: "",
-                category: "",
-                date: new Date().toISOString().split('T')[0],
-                type: "debit",
-                paymentMethod: "UPI",
-              });
-              setErrors({});
-            },
+            text: 'Add Another',
+            onPress: resetForm,
           },
           {
-            text: "Go to Dashboard",
-            onPress: () => navigation.navigate("Dashboard"),
+            text: 'Back to Dashboard',
+            onPress: () => navigation.navigate('Dashboard'),
           },
         ]
       );
     }, 1000);
   };
 
-  const CategorySelector = () => (
-    <View className="mb-6">
-      <Text className="text-gray-700 font-semibold mb-3">Category</Text>
-      <View className="flex-row flex-wrap">
-        {categories.map((category) => (
-          <TouchableOpacity
-            key={category.id}
-            onPress={() => {
-              setFormData({ ...formData, category: category.id });
-              if (errors.category) setErrors({ ...errors, category: null });
-            }}
-            className={`mr-3 mb-3 p-3 rounded-xl border-2 ${
-              formData.category === category.id
-                ? "border-blue-500 bg-blue-50"
-                : "border-gray-200 bg-white"
-            }`}
-          >
-            <View className="items-center">
-              <View
-                className="w-10 h-10 rounded-full items-center justify-center mb-2"
-                style={{ backgroundColor: category.color + "20" }}
-              >
-                <Ionicons
-                  name={category.icon}
-                  size={20}
-                  color={category.color}
-                />
-              </View>
-              <Text
-                className={`text-xs font-medium ${
-                  formData.category === category.id ? "text-blue-600" : "text-gray-600"
-                }`}
-              >
-                {category.name}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
-      {errors.category && (
-        <Text className="text-red-500 text-sm mt-1">{errors.category}</Text>
-      )}
-    </View>
-  );
+  const resetForm = () => {
+    setAmount('');
+    setDescription('');
+    setSelectedCategory('');
+    setTransactionDate(new Date().toISOString().split('T')[0]);
+    setPaymentMode('UPI');
+    setFormErrors({});
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
-      
+      <StatusBar barStyle="dark-content" />
+
       {/* Header */}
-      <View className="flex-row items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
+      <View className="bg-white px-5 py-4 flex-row items-center border-b border-gray-200">
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#374151" />
+          <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text className="text-lg font-bold text-gray-800">Add Transaction</Text>
-        <View className="w-6" />
+        <Text className="flex-1 text-center text-xl font-bold text-gray-900 mr-6">
+          Add Transaction
+        </Text>
       </View>
 
-      <ScrollView className="flex-1 px-6 py-6" showsVerticalScrollIndicator={false}>
-        {/* Transaction Type Selector */}
-        <View className="mb-6">
-          <Text className="text-gray-700 font-semibold mb-3">Transaction Type</Text>
-          <View className="flex-row bg-gray-100 rounded-xl p-1">
-            <TouchableOpacity
-              onPress={() => setFormData({ ...formData, type: "debit" })}
-              className={`flex-1 py-3 rounded-lg ${
-                formData.type === "debit" ? "bg-white shadow-sm" : ""
-              }`}
-            >
-              <Text
-                className={`text-center font-semibold ${
-                  formData.type === "debit" ? "text-red-600" : "text-gray-600"
-                }`}
-              >
-                Expense
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setFormData({ ...formData, type: "credit" })}
-              className={`flex-1 py-3 rounded-lg ${
-                formData.type === "credit" ? "bg-white shadow-sm" : ""
-              }`}
-            >
-              <Text
-                className={`text-center font-semibold ${
-                  formData.type === "credit" ? "text-green-600" : "text-gray-600"
-                }`}
-              >
-                Income
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Amount Input */}
-        <Card className="p-4 mb-6">
-          <Text className="text-gray-700 font-semibold mb-3">Amount</Text>
-          <View className="flex-row items-center">
-            <Text className="text-2xl font-bold text-gray-800 mr-2">₹</Text>
-            <Input
-              value={formData.amount}
-              onChangeText={(text) => {
-                setFormData({ ...formData, amount: text });
-                if (errors.amount) setErrors({ ...errors, amount: null });
-              }}
-              placeholder="0"
-              keyboardType="numeric"
-              error={errors.amount}
-              className="flex-1 text-2xl font-bold"
-            />
-          </View>
-        </Card>
-
-        {/* Description */}
-        <Input
-          label="Description"
-          value={formData.description}
-          onChangeText={(text) => {
-            setFormData({ ...formData, description: text });
-            if (errors.description) setErrors({ ...errors, description: null });
-          }}
-          placeholder="Enter transaction description"
-          icon="document-text-outline"
-          error={errors.description}
-        />
-
-        {/* Category Selector */}
-        <CategorySelector />
-
-        {/* Date */}
-        <Input
-          label="Date"
-          value={formData.date}
-          onChangeText={(text) => setFormData({ ...formData, date: text })}
-          placeholder="YYYY-MM-DD"
-          icon="calendar-outline"
-        />
-
-        {/* Payment Method */}
-        <View className="mb-6">
-          <Text className="text-gray-700 font-semibold mb-3">Payment Method</Text>
-          <View className="flex-row flex-wrap">
-            {paymentMethods.map((method) => (
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        <View className="p-5">
+          {/* Transaction Type Selector */}
+          <View className="mb-6">
+            <Text className="text-base font-semibold text-gray-800 mb-3">
+              Type
+            </Text>
+            <View className="flex-row bg-gray-200 rounded-xl p-1">
               <TouchableOpacity
-                key={method}
-                onPress={() => setFormData({ ...formData, paymentMethod: method })}
-                className={`mr-3 mb-3 px-4 py-2 rounded-full border-2 ${
-                  formData.paymentMethod === method
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 bg-white"
+                onPress={() => {
+                  setTransactionType('expense');
+                  setSelectedCategory('');
+                  setFormErrors({});
+                }}
+                className={`flex-1 py-3 rounded-lg ${
+                  transactionType === 'expense' ? 'bg-white' : 'bg-transparent'
                 }`}
               >
-                <Text
-                  className={`font-medium ${
-                    formData.paymentMethod === method ? "text-blue-600" : "text-gray-600"
+                <View className="flex-row items-center justify-center">
+                  <Ionicons
+                    name="remove-circle"
+                    size={18}
+                    color={transactionType === 'expense' ? '#EF4444' : '#6B7280'}
+                  />
+                  <Text
+                    className={`ml-2 font-semibold ${
+                      transactionType === 'expense'
+                        ? 'text-red-500'
+                        : 'text-gray-600'
+                    }`}
+                  >
+                    Expense
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setTransactionType('income');
+                  setSelectedCategory('');
+                  setFormErrors({});
+                }}
+                className={`flex-1 py-3 rounded-lg ${
+                  transactionType === 'income' ? 'bg-white' : 'bg-transparent'
+                }`}
+              >
+                <View className="flex-row items-center justify-center">
+                  <Ionicons
+                    name="add-circle"
+                    size={18}
+                    color={transactionType === 'income' ? '#10B981' : '#6B7280'}
+                  />
+                  <Text
+                    className={`ml-2 font-semibold ${
+                      transactionType === 'income'
+                        ? 'text-green-500'
+                        : 'text-gray-600'
+                    }`}
+                  >
+                    Income
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Amount Input */}
+          <View
+            className={`mb-6 p-5 rounded-2xl ${
+              transactionType === 'expense'
+                ? 'bg-red-50 border border-red-200'
+                : 'bg-green-50 border border-green-200'
+            }`}
+          >
+            <Text className="text-base font-semibold text-gray-800 mb-3">
+              Amount
+            </Text>
+            <View className="flex-row items-center">
+              <Text
+                className={`text-3xl font-bold mr-2 ${
+                  transactionType === 'expense'
+                    ? 'text-red-600'
+                    : 'text-green-600'
+                }`}
+              >
+                ₹
+              </Text>
+              <TextInput
+                value={amount}
+                onChangeText={(text) => {
+                  setAmount(text);
+                  if (formErrors.amount) {
+                    setFormErrors({ ...formErrors, amount: null });
+                  }
+                }}
+                placeholder="0"
+                keyboardType="numeric"
+                className={`flex-1 text-3xl font-bold ${
+                  transactionType === 'expense'
+                    ? 'text-red-600'
+                    : 'text-green-600'
+                }`}
+              />
+            </View>
+            {formErrors.amount && (
+              <Text className="text-red-500 text-sm mt-2">
+                {formErrors.amount}
+              </Text>
+            )}
+          </View>
+
+          {/* Description */}
+          <View className="mb-6">
+            <Text className="text-base font-semibold text-gray-800 mb-3">
+              Description
+            </Text>
+            <View
+              className={`flex-row items-center bg-white px-4 py-3 rounded-xl border-2 ${
+                formErrors.description ? 'border-red-400' : 'border-gray-200'
+              }`}
+            >
+              <Ionicons name="text" size={20} color="#6B7280" />
+              <TextInput
+                value={description}
+                onChangeText={(text) => {
+                  setDescription(text);
+                  if (formErrors.description) {
+                    setFormErrors({ ...formErrors, description: null });
+                  }
+                }}
+                placeholder="What's this for?"
+                className="flex-1 ml-3 text-gray-900"
+              />
+            </View>
+            {formErrors.description && (
+              <Text className="text-red-500 text-sm mt-2">
+                {formErrors.description}
+              </Text>
+            )}
+          </View>
+
+          {/* Category */}
+          <View className="mb-6">
+            <Text className="text-base font-semibold text-gray-800 mb-3">
+              Category
+            </Text>
+            <View className="flex-row flex-wrap -mx-1">
+              {activeCategories.map((cat) => (
+                <TouchableOpacity
+                  key={cat.id}
+                  onPress={() => {
+                    setSelectedCategory(cat.id);
+                    if (formErrors.category) {
+                      setFormErrors({ ...formErrors, category: null });
+                    }
+                  }}
+                  className={`m-1 p-3 rounded-xl border-2 ${
+                    selectedCategory === cat.id
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 bg-white'
                   }`}
                 >
-                  {method}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <View className="items-center w-16">
+                    <View
+                      className="w-12 h-12 rounded-full items-center justify-center mb-2"
+                      style={{ backgroundColor: cat.color + '30' }}
+                    >
+                      <Ionicons name={cat.icon} size={22} color={cat.color} />
+                    </View>
+                    <Text
+                      className={`text-xs font-medium text-center ${
+                        selectedCategory === cat.id
+                          ? 'text-blue-600'
+                          : 'text-gray-700'
+                      }`}
+                    >
+                      {cat.label}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {formErrors.category && (
+              <Text className="text-red-500 text-sm mt-2">
+                {formErrors.category}
+              </Text>
+            )}
           </View>
+
+          {/* Date */}
+          <View className="mb-6">
+            <Text className="text-base font-semibold text-gray-800 mb-3">
+              Date
+            </Text>
+            <View className="flex-row items-center bg-white px-4 py-3 rounded-xl border-2 border-gray-200">
+              <Ionicons name="calendar" size={20} color="#6B7280" />
+              <TextInput
+                value={transactionDate}
+                onChangeText={setTransactionDate}
+                placeholder="YYYY-MM-DD"
+                className="flex-1 ml-3 text-gray-900"
+              />
+            </View>
+          </View>
+
+          {/* Payment Mode */}
+          <View className="mb-6">
+            <Text className="text-base font-semibold text-gray-800 mb-3">
+              Payment Mode
+            </Text>
+            <View className="flex-row flex-wrap -mx-1">
+              {paymentModes.map((mode) => (
+                <TouchableOpacity
+                  key={mode}
+                  onPress={() => setPaymentMode(mode)}
+                  className={`m-1 px-5 py-2 rounded-full border-2 ${
+                    paymentMode === mode
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 bg-white'
+                  }`}
+                >
+                  <Text
+                    className={`font-medium ${
+                      paymentMode === mode ? 'text-blue-600' : 'text-gray-700'
+                    }`}
+                  >
+                    {mode}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Submit Button */}
+          <TouchableOpacity
+            onPress={handleSubmit}
+            disabled={loading}
+            className={`py-4 rounded-2xl items-center ${
+              transactionType === 'expense' ? 'bg-red-500' : 'bg-green-500'
+            }`}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text className="text-white text-lg font-bold">
+                {transactionType === 'expense' ? 'Add Expense' : 'Add Income'}
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
-
-        {/* Save Button */}
-        <Button
-          title="Save Transaction"
-          onPress={handleSave}
-          loading={isLoading}
-          icon="checkmark"
-          size="large"
-        />
-
-        <View className="h-4" />
       </ScrollView>
     </SafeAreaView>
   );

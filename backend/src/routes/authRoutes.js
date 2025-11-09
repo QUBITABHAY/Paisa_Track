@@ -12,7 +12,20 @@ const router = Router();
 
 router.get(
   "/google",
-  passport.authenticate("google", { scope: ["profile", "email"] }),
+  (req, res, next) => {
+    // Pass mobile parameter through OAuth state parameter
+    const isMobile = req.query.mobile === 'true';
+    
+    console.log('Initial request - mobile:', isMobile);
+    
+    // Pass state to Passport
+    const authenticateOptions = {
+      scope: ["profile", "email"],
+      state: JSON.stringify({ mobile: isMobile })
+    };
+    
+    passport.authenticate("google", authenticateOptions)(req, res, next);
+  }
 );
 
 router.get(
