@@ -7,103 +7,131 @@ import {
   RefreshControl,
   StatusBar,
   Dimensions,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-
-const { width } = Dimensions.get("window");
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  calculateTotalIncome,
+  calculateTotalExpenses,
+  calculateNetBalance,
+  getCurrentMonthTransactions,
+  calculateCategorySpending,
+  compareMonthOverMonth,
+  formatCurrency,
+} from '../utils/analitics';
+import { transactionAPI } from '../services/api';
+import { getCategoriesMap } from '../constants/categories';
+import { StatCard, QuickActionCard, BalanceCard, CategoryBreakdown } from '../components/dashboard';
+import { TransactionItem } from '../components/transactions';
 
 const DashboardScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
-  const [dashboardData, setDashboardData] = useState({
-    // Dummy data;
-    totalSpent: 12450,
-    thisMonth: 3200,
-    transactionCount: 47,
-    recentTransactions: [
-      { id: 1, title: "Grocery Shopping", amount: 450, category: "Food", date: "2025-09-26", type: "debit" },
-      { id: 2, title: "Salary Received", amount: 25000, category: "Income", date: "2025-09-25", type: "credit" },
-      { id: 3, title: "Coffee", amount: 120, category: "Food", date: "2025-09-25", type: "debit" },
-      { id: 4, title: "Bus Ticket", amount: 85, category: "Transport", date: "2025-09-24", type: "debit" },
-    ],
-    categoryBreakdown: [
-      { name: "Food", amount: 1200, color: "#FF6B6B", percentage: 37.5 },
-      { name: "Transport", amount: 800, color: "#4ECDC4", percentage: 25 },
-      { name: "Shopping", amount: 600, color: "#45B7D1", percentage: 18.75 },
-      { name: "Bills", amount: 400, color: "#96CEB4", percentage: 12.5 },
-      { name: "Others", amount: 200, color: "#FFEAA7", percentage: 6.25 },
-    ]
-  });
+  const [transactions, setTransactions] = useState([]);
+  const [userName, setUserName] = useState('');
+
+  const categories = getCategoriesMap();
+
+  // Load user data from AsyncStorage
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      const storedUser = await AsyncStorage.getItem('auth_user');
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        setUserName(userData.username || userData.name || userData.email?.split('@')[0] || 'User');
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AsyncStorage.multiRemove(['auth_token', 'auth_user']);
+              navigation.replace('Login');
+            } catch (error) {
+              console.error('Error logging out:', error);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Calculate analytics
+  const currentMonthTransactions = getCurrentMonthTransactions(transactions);
+  const totalIncome = calculateTotalIncome(currentMonthTransactions);
+  const totalExpenses = calculateTotalExpenses(currentMonthTransactions);
+  const netBalance = calculateNetBalance(currentMonthTransactions);
+  const monthComparison = compareMonthOverMonth(transactions);
+  const categorySpending = calculateCategorySpending(currentMonthTransactions);
+  
+  // Get recent transactions (last 4)
+  const recentTransactions = [...transactions]
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 4);
+  
+  // Create category breakdown
+  const categoryBreakdown = Object.entries(categorySpending)
+    .map(([categoryKey, amount]) => {
+      const category = categories[categoryKey] || categories.other;
+      return {
+        name: category.name,
+        amount,
+        color: category.color,
+        percentage: (amount / totalExpenses) * 100,
+      };
+    })
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 5);
+
+  const fetchTransactions = async () => {
+    try {
+      const response = await transactionAPI.getAll();
+      if (response.data) {
+        const transformedData = response.data.map(t => ({
+          id: t.id,
+          title: t.description,
+          description: t.description,
+          amount: t.amount,
+          category: t.category?.toLowerCase() || 'other',
+          date: new Date(t.date).toISOString().split('T')[0],
+          type: t.type === 'EXPENSE' ? 'debit' : 'credit',
+          paymentMethod: t.paymentMethod || 'Cash',
+        }));
+        setTransactions(transformedData);
+      }
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    // Simulate API call
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    fetchTransactions();
   }, []);
-
-  const user = { name: "Abhay" }; // Dummy user data
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const QuickActionCard = ({ icon, title, subtitle, onPress, color = "blue" }) => (
-    <TouchableOpacity
-      onPress={onPress}
-      className={`bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex-1 mx-1`}
-    >
-      <View className={`w-12 h-12 bg-${color}-100 rounded-full items-center justify-center mb-3`}>
-        <Ionicons name={icon} size={24} color={color === "blue" ? "#3B82F6" : color === "green" ? "#10B981" : "#8B5CF6"} />
-      </View>
-      <Text className="font-bold text-gray-800 text-sm">{title}</Text>
-      <Text className="text-gray-500 text-xs">{subtitle}</Text>
-    </TouchableOpacity>
-  );
-
-  const StatCard = ({ title, value, subtitle, icon, color }) => (
-    <View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex-1 mx-1">
-      <View className="flex-row items-center justify-between mb-2">
-        <Text className="text-gray-600 text-sm font-medium">{title}</Text>
-        <View className={`w-8 h-8 bg-${color}-100 rounded-full items-center justify-center`}>
-          <Ionicons name={icon} size={16} color={color === "blue" ? "#3B82F6" : color === "green" ? "#10B981" : "#EF4444"} />
-        </View>
-      </View>
-      <Text className="text-2xl font-bold text-gray-800 mb-1">{value}</Text>
-      <Text className="text-gray-500 text-xs">{subtitle}</Text>
-    </View>
-  );
-
-  const TransactionItem = ({ transaction }) => (
-    <View className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-3">
-      <View className="flex-row items-center justify-between">
-        <View className="flex-row items-center flex-1">
-          <View className={`w-10 h-10 rounded-full items-center justify-center ${
-            transaction.type === 'credit' ? 'bg-green-100' : 'bg-red-100'
-          }`}>
-            <Ionicons 
-              name={transaction.type === 'credit' ? "arrow-down" : "arrow-up"} 
-              size={16} 
-              color={transaction.type === 'credit' ? "#10B981" : "#EF4444"} 
-            />
-          </View>
-          <View className="ml-3 flex-1">
-            <Text className="font-semibold text-gray-800">{transaction.title}</Text>
-            <Text className="text-gray-500 text-sm">{transaction.category} • {transaction.date}</Text>
-          </View>
-        </View>
-        <Text className={`font-bold ${transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
-          {transaction.type === 'credit' ? '+' : '-'}{formatCurrency(transaction.amount)}
-        </Text>
-      </View>
-    </View>
-  );
+  
+  const currentMonth = new Date().toLocaleString('default', { month: 'long' });
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -117,12 +145,15 @@ const DashboardScreen = ({ navigation }) => {
         {/* Header */}
         <View className="px-6 pt-4 pb-6">
           <View className="flex-row items-center justify-between mb-6">
-            <View>
-              <Text className="text-2xl font-bold text-gray-800">Welcome back {user.name}!</Text>
+            <View className="flex-1">
+              <Text className="text-2xl font-bold text-gray-800">Welcome back {userName}!</Text>
               <Text className="text-gray-600">Here's your financial overview</Text>
             </View>
-            <TouchableOpacity className="w-10 h-10 bg-white rounded-full items-center justify-center shadow-sm">
-              <Ionicons name="notifications-outline" size={20} color="#6B7280" />
+            <TouchableOpacity 
+              onPress={handleLogout}
+              className="w-10 h-10 rounded-full bg-red-50 items-center justify-center ml-3"
+            >
+              <Ionicons name="log-out-outline" size={20} color="#EF4444" />
             </TouchableOpacity>
           </View>
 
@@ -130,14 +161,19 @@ const DashboardScreen = ({ navigation }) => {
           <View className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-3xl p-6 shadow-lg">
             <View className="flex-row items-center justify-between mb-4">
               <Text className="text-black opacity-90 text-sm font-medium">Total Balance</Text>
-              <Ionicons name="eye-outline" size={20} color="black" />
             </View>
             <Text className="text-black text-3xl font-bold mb-2">
-              {formatCurrency(dashboardData.totalSpent)}
+              {formatCurrency(netBalance)}
             </Text>
             <View className="flex-row items-center">
-              <Ionicons name="trending-up" size={16} color="green" />
-              <Text className="text-green-900 text-sm ml-1 font-medium">+12.5% from last month</Text>  {/* change */}
+              <Ionicons 
+                name={monthComparison.change.balance >= 0 ? "trending-up" : "trending-down"} 
+                size={16} 
+                color={monthComparison.change.balance >= 0 ? "green" : "red"} 
+              />
+              <Text className={`text-sm ml-1 font-medium ${monthComparison.change.balance >= 0 ? 'text-green-900' : 'text-red-900'}`}>
+                {monthComparison.change.balance >= 0 ? '+' : ''}{monthComparison.change.balance.toFixed(1)}% from last month
+              </Text>
             </View>
           </View>
         </View>
@@ -147,14 +183,14 @@ const DashboardScreen = ({ navigation }) => {
           <View className="flex-row">
             <StatCard
               title="This Month"
-              value={formatCurrency(dashboardData.thisMonth)}
-              subtitle="September spending"  /*update this dynamically*/
+              value={formatCurrency(totalExpenses)}
+              subtitle={`${currentMonth} spending`}
               icon="calendar"
               color="blue"
             />
             <StatCard
               title="Transactions"
-              value={dashboardData.transactionCount.toString()}
+              value={currentMonthTransactions.length.toString()}
               subtitle="Total transactions"
               icon="receipt"
               color="green"
@@ -180,13 +216,6 @@ const DashboardScreen = ({ navigation }) => {
               onPress={() => navigation.navigate("Analytics")}
               color="green"
             />
-            <QuickActionCard
-              icon="card"
-              title="Categories"
-              subtitle="Manage categories"
-              onPress={() => navigation.navigate("Categories")}
-              color="purple"
-            />
           </View>
         </View>
 
@@ -198,16 +227,25 @@ const DashboardScreen = ({ navigation }) => {
               <Text className="text-blue-500 font-semibold">View All</Text>
             </TouchableOpacity>
           </View>
-          {dashboardData.recentTransactions.map((transaction) => (
-            <TransactionItem key={transaction.id} transaction={transaction} />
-          ))}
+          {recentTransactions.map((transaction) => {
+            const category = categories[transaction.category] || categories.other;
+            return (
+              <TransactionItem 
+                key={transaction.id} 
+                transaction={{
+                  ...transaction,
+                  category: category.name,
+                }} 
+              />
+            );
+          })}
         </View>
 
         {/* Category Breakdown */}
         <View className="px-6 mb-8">
           <Text className="text-lg font-bold text-gray-800 mb-4">Spending by Category</Text>
           <View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            {dashboardData.categoryBreakdown.map((category, index) => (
+            {categoryBreakdown.length > 0 ? categoryBreakdown.map((category, index) => (
               <View key={index} className="mb-4 last:mb-0">
                 <View className="flex-row items-center justify-between mb-2">
                   <Text className="font-semibold text-gray-800">{category.name}</Text>
@@ -223,7 +261,9 @@ const DashboardScreen = ({ navigation }) => {
                   />
                 </View>
               </View>
-            ))}
+            )) : (
+              <Text className="text-gray-400 text-center py-4">No spending data available</Text>
+            )}
           </View>
         </View>
       </ScrollView>

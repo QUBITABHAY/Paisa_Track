@@ -7,16 +7,16 @@ import {
   logout,
   getCurrentUser,
 } from "../controllers/authController.js";
+import { authenticate } from "../middleware/authMiddleware.js";
 
 const router = Router();
 
 router.get(
   "/google",
   (req, res, next) => {
-    // Pass mobile parameter through OAuth state parameter
     const isMobile = req.query.mobile === 'true';
     
-    console.log('Initial request - mobile:', isMobile);
+    console.log('Google OAuth - mobile:', isMobile);
     
     // Pass state to Passport
     const authenticateOptions = {
@@ -34,7 +34,7 @@ router.get(
     failureRedirect: "/api/auth/google/failure",
     session: true,
   }),
-  googleAuthSuccess,
+  googleAuthSuccess
 );
 
 router.get(
@@ -43,14 +43,13 @@ router.get(
     failureRedirect: "/api/auth/google/failure",
     session: false,
   }),
-  googleAuthCallback,
+  googleAuthCallback
 );
 
 router.get("/google/failure", googleAuthFailure);
 
-router.post("/logout", logout);
-router.get("/logout", logout);
-
-router.get("/me", getCurrentUser);
+router.post("/logout", authenticate, logout);
+router.get("/logout", authenticate, logout);
+router.get("/me", authenticate, getCurrentUser);
 
 export default router;

@@ -3,6 +3,8 @@ import dotenv from "dotenv";
 import cors from "cors";
 import session from "express-session";
 import passport from "./config/passport.config.js";
+import routes from "./routes/index.js";
+import { errorHandler, notFoundHandler } from "./middleware/errorMiddleware.js";
 
 dotenv.config();
 
@@ -14,7 +16,7 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:8081",
     credentials: true,
-  }),
+  })
 );
 
 app.use(express.json());
@@ -29,9 +31,9 @@ app.use(
     cookie: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      maxAge: 24 * 60 * 60 * 1000,
     },
-  }),
+  })
 );
 
 // Initialize Passport
@@ -39,11 +41,22 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.get("/", (req, res) => {
-  res.json({ message: "Paisa Track API is running!", version: "1.0.0" });
+  res.json({ 
+    success: true,
+    message: "Paisa Track API is running!", 
+    version: "1.0.0",
+    endpoints: {
+      health: "/api/health",
+      auth: "/api/auth",
+      user: "/api/user",
+      transactions: "/api/transactions"
+    }
+  });
 });
 
-import routes from "./routes/index.js";
 app.use(routes);
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

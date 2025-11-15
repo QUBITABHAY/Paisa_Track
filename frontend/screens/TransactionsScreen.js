@@ -10,52 +10,53 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { Card, Badge, EmptyState, Button } from "../components/UI";
+import { transactionAPI } from '../services/api';
+import { getCategoriesMap } from '../constants/categories';
+import { Card, Button, EmptyState } from '../components/common';
+import { TransactionItem } from '../components/transactions';
+import { formatCurrency } from '../utils/analitics';
 
 const TransactionsScreen = ({ navigation }) => {
-  const [transactions, setTransactions] = useState([
-    { id: 1, title: "Grocery Shopping", amount: 450, category: "food", date: "2025-09-26", type: "debit", paymentMethod: "UPI" },
-    { id: 2, title: "Salary Received", amount: 25000, category: "income", date: "2025-09-25", type: "credit", paymentMethod: "Bank Transfer" },
-    { id: 3, title: "Coffee", amount: 120, category: "food", date: "2025-09-25", type: "debit", paymentMethod: "UPI" },
-    { id: 4, title: "Bus Ticket", amount: 85, category: "transport", date: "2025-09-24", type: "debit", paymentMethod: "Card" },
-    { id: 5, title: "Movie Tickets", amount: 500, category: "entertainment", date: "2025-09-23", type: "debit", paymentMethod: "UPI" },
-    { id: 6, title: "Freelance Work", amount: 5000, category: "income", date: "2025-09-22", type: "credit", paymentMethod: "UPI" },
-    { id: 7, title: "Electricity Bill", amount: 1200, category: "bills", date: "2025-09-21", type: "debit", paymentMethod: "Net Banking" },
-    { id: 8, title: "Gym Membership", amount: 2000, category: "health", date: "2025-09-20", type: "debit", paymentMethod: "UPI" },
-  ]);
-
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState("all"); // all, debit, credit
-  const [sortBy, setSortBy] = useState("date"); // date, amount
+  const [filter, setFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("date");
 
-  const categories = {
-    food: { name: "Food", icon: "restaurant", color: "#FF6B6B" },
-    transport: { name: "Transport", icon: "car", color: "#4ECDC4" },
-    shopping: { name: "Shopping", icon: "bag", color: "#45B7D1" },
-    bills: { name: "Bills", icon: "receipt", color: "#96CEB4" },
-    entertainment: { name: "Entertainment", icon: "game-controller", color: "#FFEAA7" },
-    health: { name: "Health", icon: "fitness", color: "#FD79A8" },
-    education: { name: "Education", icon: "book", color: "#A29BFE" },
-    income: { name: "Income", icon: "trending-up", color: "#00B894" },
-    other: { name: "Other", icon: "ellipsis-horizontal", color: "#636E72" },
+  const categories = getCategoriesMap();
+
+  React.useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      const data = await transactionAPI.getAll();
+      const transformed = data.map(t => ({
+        id: t.id,
+        title: t.description,
+        amount: parseFloat(t.amount),
+        category: t.category.toLowerCase(),
+        date: t.date.split('T')[0],
+        type: t.type === 'EXPENSE' ? 'debit' : 'credit',
+        paymentMethod: t.paymentMethod || 'UPI'
+      }));
+      
+      setTransactions(transformed);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      Alert.alert('Error', 'Failed to load transactions');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    // Simulate API call
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    fetchTransactions();
   }, []);
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
 
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);
@@ -85,63 +86,30 @@ const TransactionsScreen = ({ navigation }) => {
       }
     });
 
-  const handleDeleteTransaction = (id) => {
+    const handleDeleteTransaction = (id) => {
     Alert.alert(
       "Delete Transaction",
       "Are you sure you want to delete this transaction?",
       [
-        { text: "Cancel", style: "cancel" },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => {
-            setTransactions(transactions.filter(t => t.id !== id));
+          onPress: async () => {
+            try {
+              await transactionAPI.delete(id);
+              setTransactions(transactions.filter(t => t.id !== id));
+              Alert.alert('Success', 'Transaction deleted successfully');
+            } catch (error) {
+              console.error('Error deleting transaction:', error);
+              Alert.alert('Error', 'Failed to delete transaction');
+            }
           },
         },
       ]
-    );
-  };
-
-  const TransactionItem = ({ transaction }) => {
-    const category = categories[transaction.category] || categories.other;
-    
-    return (
-      <Card className="p-4 mb-3">
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center flex-1">
-            <View
-              className="w-12 h-12 rounded-full items-center justify-center mr-3"
-              style={{ backgroundColor: category.color + "20" }}
-            >
-              <Ionicons name={category.icon} size={20} color={category.color} />
-            </View>
-            <View className="flex-1">
-              <Text className="font-semibold text-gray-800 text-base">{transaction.title}</Text>
-              <View className="flex-row items-center mt-1">
-                <Text className="text-gray-500 text-sm">{category.name}</Text>
-                <View className="w-1 h-1 bg-gray-400 rounded-full mx-2" />
-                <Text className="text-gray-500 text-sm">{formatDate(transaction.date)}</Text>
-              </View>
-              <Text className="text-gray-400 text-xs mt-1">{transaction.paymentMethod}</Text>
-            </View>
-          </View>
-          <View className="items-end">
-            <Text
-              className={`font-bold text-lg ${
-                transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'
-              }`}
-            >
-              {transaction.type === 'credit' ? '+' : '-'}{formatCurrency(transaction.amount)}
-            </Text>
-            <TouchableOpacity
-              onPress={() => handleDeleteTransaction(transaction.id)}
-              className="mt-2 p-2"
-            >
-              <Ionicons name="trash-outline" size={16} color="#EF4444" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Card>
     );
   };
 
@@ -224,9 +192,21 @@ const TransactionsScreen = ({ navigation }) => {
               Showing {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}
               {sortBy === "amount" ? " (sorted by amount)" : " (sorted by date)"}
             </Text>
-            {filteredTransactions.map((transaction) => (
-              <TransactionItem key={transaction.id} transaction={transaction} />
-            ))}
+            {filteredTransactions.map((transaction) => {
+              const category = categories[transaction.category] || categories.other;
+              return (
+                <TransactionItem 
+                  key={transaction.id} 
+                  transaction={{
+                    ...transaction,
+                    category: category.name,
+                    date: formatDate(transaction.date)
+                  }}
+                  showDelete={true}
+                  onDelete={() => handleDeleteTransaction(transaction.id)}
+                />
+              );
+            })}
           </>
         ) : (
           <EmptyState

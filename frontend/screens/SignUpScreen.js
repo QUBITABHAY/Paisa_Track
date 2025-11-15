@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import GoogleSignInButton from '../components/GoogleSignInButton';
 
 const SignUpScreen = ({ navigation }) => {
@@ -83,10 +84,14 @@ const SignUpScreen = ({ navigation }) => {
       setIsLoading(false);
 
       if (data.success) {
+        // Store credentials in AsyncStorage after signup
+        await AsyncStorage.setItem('auth_token', data.data.token || 'token_placeholder');
+        await AsyncStorage.setItem('auth_user', JSON.stringify(data.data.user || { name: username, email: email }));
+        
         Alert.alert("Success", "Account created successfully!", [
           {
             text: "OK",
-            onPress: () => navigation.navigate("Login"),
+            onPress: () => navigation.replace("Dashboard"),
           },
         ]);
       } else {

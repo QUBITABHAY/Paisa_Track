@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { transactionAPI } from '../services/api';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, PAYMENT_METHODS } from '../constants/categories';
 
 const AddTransactionScreen = ({ navigation }) => {
   const [transactionType, setTransactionType] = useState('expense');
@@ -24,30 +26,7 @@ const AddTransactionScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [formErrors, setFormErrors] = useState({});
 
-  const expenseCategories = [
-    { id: 'food', label: 'Food', icon: 'fast-food', color: '#FF6B6B' },
-    { id: 'transport', label: 'Transport', icon: 'car', color: '#4ECDC4' },
-    { id: 'shopping', label: 'Shopping', icon: 'cart', color: '#45B7D1' },
-    { id: 'bills', label: 'Bills', icon: 'document-text', color: '#96CEB4' },
-    { id: 'entertainment', label: 'Entertainment', icon: 'musical-notes', color: '#FFEAA7' },
-    { id: 'health', label: 'Health', icon: 'medical', color: '#FD79A8' },
-    { id: 'education', label: 'Education', icon: 'school', color: '#A29BFE' },
-    { id: 'other', label: 'Other', icon: 'apps', color: '#636E72' },
-  ];
-
-  const incomeCategories = [
-    { id: 'salary', label: 'Salary', icon: 'cash', color: '#00B894' },
-    { id: 'freelance', label: 'Freelance', icon: 'laptop', color: '#6C5CE7' },
-    { id: 'investment', label: 'Investment', icon: 'trending-up', color: '#0984E3' },
-    { id: 'business', label: 'Business', icon: 'business', color: '#FDCB6E' },
-    { id: 'gift', label: 'Gift', icon: 'gift', color: '#E17055' },
-    { id: 'refund', label: 'Refund', icon: 'refresh', color: '#74B9FF' },
-    { id: 'other', label: 'Other', icon: 'apps', color: '#636E72' },
-  ];
-
-  const paymentModes = ['UPI', 'Card', 'Cash', 'Net Banking', 'Wallet'];
-
-  const activeCategories = transactionType === 'expense' ? expenseCategories : incomeCategories;
+  const activeCategories = transactionType === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
 
   const validateInputs = () => {
     const errors = {};
@@ -73,9 +52,16 @@ const AddTransactionScreen = ({ navigation }) => {
 
     setLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await transactionAPI.create({
+        amount: parseFloat(amount),
+        description,
+        type: transactionType === 'expense' ? 'debit' : 'credit',
+        category: selectedCategory,
+        paymentMethod: paymentMode,
+        date: new Date(transactionDate),
+      });
+
       Alert.alert(
         'Success',
         'Transaction saved successfully!',
@@ -90,7 +76,11 @@ const AddTransactionScreen = ({ navigation }) => {
           },
         ]
       );
-    }, 1000);
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Failed to save transaction');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetForm = () => {
@@ -327,7 +317,7 @@ const AddTransactionScreen = ({ navigation }) => {
               Payment Mode
             </Text>
             <View className="flex-row flex-wrap -mx-1">
-              {paymentModes.map((mode) => (
+              {PAYMENT_METHODS.map((mode) => (
                 <TouchableOpacity
                   key={mode}
                   onPress={() => setPaymentMode(mode)}

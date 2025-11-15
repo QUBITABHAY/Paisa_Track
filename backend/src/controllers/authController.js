@@ -1,27 +1,12 @@
-import jwt from "jsonwebtoken";
+import { generateToken } from "../utils/jwtUtils.js";
+import { sendSuccess, sendError, sendAuthError } from "../utils/responseUtils.js";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-jwt-secret-key";
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
-
-const generateToken = (user) => {
-  return jwt.sign(
-    {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-    },
-    JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN },
-  );
-};
-
 export const googleAuthSuccess = async (req, res) => {
   try {
     if (!req.user) {
-      // Try to get mobile flag from state parameter
       let isMobileApp = false;
       if (req.query.state) {
         try {
@@ -46,7 +31,6 @@ export const googleAuthSuccess = async (req, res) => {
     const token = generateToken(req.user);
     const { password, ...userWithoutPassword } = req.user;
 
-    // Try to get mobile flag from state parameter
     let isMobileApp = false;
     if (req.query.state) {
       try {
@@ -63,7 +47,6 @@ export const googleAuthSuccess = async (req, res) => {
     console.log('OAuth Success - isMobileApp:', isMobileApp, 'State:', req.query.state);
     
     if (isMobileApp) {
-      // For mobile, redirect to app scheme - WebBrowser will capture this
       const callbackUrl = `${appScheme}://auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(userWithoutPassword))}`;
       console.log('Redirecting to mobile app:', callbackUrl);
       return res.redirect(callbackUrl);
@@ -75,15 +58,13 @@ export const googleAuthSuccess = async (req, res) => {
     );
   } catch (error) {
     console.error("Google auth success error:", error);
-    
-    // Try to get mobile flag from state parameter
     let isMobileApp = false;
     if (req.query.state) {
       try {
         const state = JSON.parse(req.query.state);
         isMobileApp = state.mobile === true;
       } catch (e) {
-        // Ignore parsing errors
+        console.error('Error parsing state:', e);
       }
     }
     
@@ -98,14 +79,13 @@ export const googleAuthSuccess = async (req, res) => {
     );
   }
 };export const googleAuthFailure = (req, res) => {
-  // Try to get mobile flag from state parameter
   let isMobileApp = false;
   if (req.query.state) {
     try {
       const state = JSON.parse(req.query.state);
       isMobileApp = state.mobile === true;
     } catch (e) {
-      // Ignore parsing errors
+      console.error('Error parsing state:', e);
     }
   }
   
@@ -161,29 +141,18 @@ export const getCurrentUser = (req, res) => {
 export const googleAuthCallback = async (req, res) => {
   try {
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: "Authentication failed",
-      });
+      return sendAuthError(res, "Authentication failed");
     }
 
     const token = generateToken(req.user);
-
     const { password, ...userWithoutPassword } = req.user;
 
-    res.json({
-      success: true,
-      message: "Authentication successful",
-      data: {
-        token,
-        user: userWithoutPassword,
-      },
+    return sendSuccess(res, 200, "Authentication successful", {
+      token,
+      user: userWithoutPassword,
     });
   } catch (error) {
     console.error("Google auth callback error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    return sendError(res, 500, "Internal server error");
   }
 };

@@ -1,75 +1,104 @@
 import prisma from "../config/db.config.js";
+import { sendSuccess, sendError, sendValidationError, sendNotFoundError } from "../utils/responseUtils.js";
+import { validateRequiredFields } from "../utils/validationUtils.js";
 
 export const createTransaction = async (req, res) => {
     try {
-        const { amount, description, userId } = req.body;
+        const { amount, description, type, category, paymentMethod, date } = req.body;
+        
+        const requiredValidation = validateRequiredFields(req.body, ['amount', 'description']);
+        if (!requiredValidation.isValid) {
+            return sendValidationError(res, requiredValidation.message);
+        }
+
         const data = await prisma.transaction.create({
             data: {
-                amount,
+                amount: parseFloat(amount),
                 description,
-                userId
+                userId: req.userId,
+                type: type || 'EXPENSE',
+                category: category || 'other',
+                paymentMethod: paymentMethod || 'Cash',
+                date: date ? new Date(date) : new Date()
             }
         });
-        res.send({ message: "Transaction Created Successfully", data: data });
+        
+        return sendSuccess(res, 201, "Transaction created successfully", data);
     } catch (error) {
-        console.log(error);
-        res.send({ message: "Internal Server Error" });
+        console.error("Create transaction error:", error);
+        return sendError(res, 500, "Internal server error");
     }
 };
 
 export const getTransactions = async (req, res) => {
     try {
-        const { userId } = req.body;
         const data = await prisma.transaction.findMany({
-            where: {
-                userId: userId
-            }
+            where: { userId: req.userId },
+            orderBy: { date: 'desc' }
         });
-        res.send({ message: "Transactions Fetched Successfully", data: data });
+        
+        return sendSuccess(res, 200, "Transactions fetched successfully", data);
     } catch (error) {
-        console.log(error);
-        res.send({ message: "Internal Server Error" }); 
+        console.error("Get transactions error:", error);
+        return sendError(res, 500, "Internal server error");
     }
 };
 
 export const updateTransaction = async (req, res) => {
     try {
-        const { transactionId, amount, description } = req.body;
-        const checkDetil = await prisma.transaction.findUnique({
-            where: {
-                id: transactionId
-            }
-        });
-
-        if (!checkDetil) {
-            res.send({ message: "Transaction not found" });
+        const { id } = req.params;
+        const { amount, description, type, category, paymentMethod, date } = req.body;
+        
+        if (!id) {
+            return sendValidationError(res, "Transaction ID is required");
         }
 
-        const data = await prisma.transaction.update({
-            where: {
-                id: transactionId
-            },
-            data: {
-                amount,
-                description
-            }
+        const existingTransaction = await prisma.transaction.findUnique({
+            where: { id: parseInt(id) }
         });
-        res.send({ message: "Transaction Updated Successfully", data: data });
+
+        if (!existingTransaction) {
+            return sendNotFoundError(res, "Transaction not found");
+        }
+
+        const updateData = {};
+        if (amount !== undefined) updateData.amount = parseFloat(amount);
+        if (description !== undefined) updateData.description = description;
+        if (type !== undefined) updateData.type = type;
+        if (category !== undefined) updateData.category = category;
+        if (paymentMethod !== undefined) updateData.paymentMethod = paymentMethod;
+        if (date !== undefined) updateData.date = new Date(date);
+
+        const data = await prisma.transaction.update({
+            where: { id: parseInt(id) },
+            data: updateData
+        });
+        
+        return sendSuccess(res, 200, "Transaction updated successfully", data);
     } catch (error) {
-        console.log(error);
-        res.send({ message: "Internal Server Error" });
+        console.error("Update transaction error:", error);
+        return sendError(res, 500, "Internal server error");
     }
 };
 
 export const deleteTransaction = async (req, res) => {
     try {
-        const { transactionId } = req.body;
-        const result = await prisma.transaction.delete({ where: { id: transactionId } });
-        if (!result) {
-            res.send({ message: "Invalid Transaction" });
+        const { id } = req.params;
+        
+        if (!id) {
+            return sendValidationError(res, "Transaction ID is required");
         }
-        res.send({ message: "Transaction Deleted Successfully" });
+
+        await prisma.transaction.delete({ 
+            where: { id: parseInt(id) } 
+        });
+        
+        return sendSuccess(res, 200, "Transaction deleted successfully");
     } catch (error) {
-        res.send({ message: "Internal Server Error" });
+        console.error("Delete transaction error:", error);
+        if (error.code === 'P2025') {
+            return sendNotFoundError(res, "Transaction not found");
+        }
+        return sendError(res, 500, "Internal server error");
     }
 };

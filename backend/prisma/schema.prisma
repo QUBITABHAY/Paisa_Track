@@ -34,7 +34,15 @@ model Transaction {
   id Int @id @default(autoincrement())
   amount Float
   description String?
+  type TransactionType
+  category String?
+  paymentMethod String?
   date DateTime @default(now())
   userId Int
   user Users @relation(fields: [userId], references: [id])
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
 }

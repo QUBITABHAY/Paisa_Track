@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import GoogleSignInButton from '../components/GoogleSignInButton';
 
 const LoginScreen = ({ navigation }) => {
@@ -68,6 +69,11 @@ const LoginScreen = ({ navigation }) => {
 
       if (data.success) {
         console.log("Login successful:", data.data.user);
+        
+        // Store credentials in AsyncStorage
+        await AsyncStorage.setItem('auth_token', data.data.token || 'token_placeholder');
+        await AsyncStorage.setItem('auth_user', JSON.stringify(data.data.user));
+        
         Alert.alert("Success", "Welcome back!", [
           {
             text: "OK",
@@ -80,20 +86,10 @@ const LoginScreen = ({ navigation }) => {
     } catch (error) {
       setIsLoading(false);
       console.error("Login error:", error);
-
-      if (username.toLowerCase() === "test@test.com" && password === "testpass123") {
-        Alert.alert("Demo Login", "Logged in with demo credentials", [
-          {
-            text: "OK",
-            onPress: () => navigation.replace("Dashboard"),
-          },
-        ]);
-      } else {
-        Alert.alert(
-          "Error",
-          "Network error. Try demo credentials (test@test.com/testpass123)"
-        );
-      }
+      Alert.alert(
+        "Error",
+        "Network error. Please check your connection and try again."
+      );
     }
   };
 
