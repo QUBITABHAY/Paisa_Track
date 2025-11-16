@@ -70,7 +70,6 @@ const LoginScreen = ({ navigation }) => {
       if (data.success) {
         console.log("Login successful:", data.data.user);
         
-        // Store credentials in AsyncStorage
         await AsyncStorage.setItem('auth_token', data.data.token || 'token_placeholder');
         await AsyncStorage.setItem('auth_user', JSON.stringify(data.data.user));
         
@@ -243,7 +242,6 @@ const LoginScreen = ({ navigation }) => {
                 mode="signin"
                 onSuccess={(result) => {
                   console.log('Google sign-in successful, navigating to Dashboard');
-                  // Navigate to Dashboard after successful login
                   navigation.replace('Dashboard');
                 }}
                 onError={(error) => {

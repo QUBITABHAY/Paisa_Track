@@ -97,7 +97,6 @@ const STORAGE_KEYS = {
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Load stored authentication data on app start
   useEffect(() => {
     loadStoredAuth();
   }, []);
@@ -130,7 +129,6 @@ export const AuthProvider = ({ children }) => {
     try {
       dispatch({ type: AuthActionTypes.LOGIN_START });
 
-      // Store in AsyncStorage
       await Promise.all([
         AsyncStorage.setItem(STORAGE_KEYS.TOKEN, token),
         AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData))
@@ -154,7 +152,6 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      // Clear AsyncStorage
       await Promise.all([
         AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
         AsyncStorage.removeItem(STORAGE_KEYS.USER)
@@ -163,7 +160,6 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: AuthActionTypes.LOGOUT });
     } catch (error) {
       console.error('Logout error:', error);
-      // Still dispatch logout even if storage clearing fails
       dispatch({ type: AuthActionTypes.LOGOUT });
     }
   };
@@ -187,17 +183,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   const value = {
-    // State
     ...state,
-    
-    // Actions
+
     login,
     logout,
     updateUser,
     clearError,
     getAuthHeader,
     
-    // Utils
     isLoggedIn: state.isAuthenticated && state.token && state.user
   };
 
@@ -208,7 +201,6 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Custom hook to use auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

@@ -84,7 +84,6 @@ const SignUpScreen = ({ navigation }) => {
       setIsLoading(false);
 
       if (data.success) {
-        // Store credentials in AsyncStorage after signup
         await AsyncStorage.setItem('auth_token', data.data.token || 'token_placeholder');
         await AsyncStorage.setItem('auth_user', JSON.stringify(data.data.user || { name: username, email: email }));
         
@@ -320,7 +319,6 @@ const SignUpScreen = ({ navigation }) => {
                 mode="signin"
                 onSuccess={(result) => {
                   console.log('Google sign-up successful, navigating to Dashboard');
-                  // Navigate to Dashboard after successful signup
                   navigation.replace('Dashboard');
                 }}
                 onError={(error) => {

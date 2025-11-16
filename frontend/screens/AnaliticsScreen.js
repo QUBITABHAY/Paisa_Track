@@ -5,8 +5,8 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  Dimensions,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,8 +24,6 @@ import {
   compareMonthOverMonth,
   formatCurrency,
 } from '../utils/analitics';
-
-const { width } = Dimensions.get('window');
 
 const AnalyticsScreen = ({ navigation }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('month');
@@ -359,13 +357,30 @@ const AnalyticsScreen = ({ navigation }) => {
       </View>
 
       <ScrollView className="flex-1 px-5 py-6" showsVerticalScrollIndicator={false}>
-        <PeriodSelector />
-        <OverviewCard />
-        <SavingsRateCard />
-        <TopCategoriesCard />
-        <MonthlyTrendCard />
-        <InsightsCard />
-        <View className="h-4" />
+        {loading ? (
+          <View className="flex-1 items-center justify-center py-20">
+            <ActivityIndicator size="large" color="#3B82F6" />
+            <Text className="text-gray-600 mt-4">Loading analytics...</Text>
+          </View>
+        ) : transactions.length === 0 ? (
+          <View className="flex-1 items-center justify-center py-20">
+            <Ionicons name="analytics-outline" size={64} color="#D1D5DB" />
+            <Text className="text-gray-600 mt-4 text-center">No transactions yet</Text>
+            <Text className="text-gray-400 text-sm text-center mt-2">
+              Start adding transactions to see analytics
+            </Text>
+          </View>
+        ) : (
+          <>
+            <PeriodSelector />
+            <OverviewCard />
+            <SavingsRateCard />
+            <TopCategoriesCard />
+            <MonthlyTrendCard />
+            <InsightsCard />
+            <View className="h-4" />
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

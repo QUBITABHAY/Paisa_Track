@@ -8,7 +8,7 @@ const AuthCallbackScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { login } = useAuth();
-  const [status, setStatus] = useState('processing'); // processing, success, error
+  const [status, setStatus] = useState('processing');
   const [message, setMessage] = useState('Completing authentication...');
 
   useEffect(() => {
@@ -17,26 +17,21 @@ const AuthCallbackScreen = () => {
 
   const handleAuthCallback = async () => {
     try {
-      // Get parameters from URL
       const params = route.params || {};
       
-      // Check for error
       if (params.error) {
         setStatus('error');
         setMessage(getErrorMessage(params.error));
         
-        // Redirect to login after delay
         setTimeout(() => {
           navigation.replace('Login');
         }, 3000);
         return;
       }
 
-      // Check for token and user data
       if (params.token && params.user) {
         setMessage('Saving your credentials...');
         
-        // Parse user data if it's a string
         let userData = params.user;
         if (typeof userData === 'string') {
           try {
@@ -47,14 +42,12 @@ const AuthCallbackScreen = () => {
           }
         }
 
-        // Login with the received data
         const result = await login(userData, params.token);
 
         if (result.success) {
           setStatus('success');
           setMessage(`Welcome back, ${userData.username || 'User'}!`);
           
-          // Navigate to Dashboard after short delay
           setTimeout(() => {
             navigation.replace('Dashboard');
           }, 1500);
@@ -69,7 +62,6 @@ const AuthCallbackScreen = () => {
       setStatus('error');
       setMessage(error.message || 'Authentication failed');
       
-      // Redirect to login after delay
       setTimeout(() => {
         navigation.replace('Login');
       }, 3000);

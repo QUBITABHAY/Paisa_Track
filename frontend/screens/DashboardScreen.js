@@ -33,7 +33,6 @@ const DashboardScreen = ({ navigation }) => {
 
   const categories = getCategoriesMap();
 
-  // Load user data from AsyncStorage
   useEffect(() => {
     loadUserData();
   }, []);
@@ -72,7 +71,6 @@ const DashboardScreen = ({ navigation }) => {
     );
   };
 
-  // Calculate analytics
   const currentMonthTransactions = getCurrentMonthTransactions(transactions);
   const totalIncome = calculateTotalIncome(currentMonthTransactions);
   const totalExpenses = calculateTotalExpenses(currentMonthTransactions);
@@ -80,12 +78,10 @@ const DashboardScreen = ({ navigation }) => {
   const monthComparison = compareMonthOverMonth(transactions);
   const categorySpending = calculateCategorySpending(currentMonthTransactions);
   
-  // Get recent transactions (last 4)
   const recentTransactions = [...transactions]
     .sort((a, b) => new Date(b.date) - new Date(a.date))
     .slice(0, 4);
   
-  // Create category breakdown
   const categoryBreakdown = Object.entries(categorySpending)
     .map(([categoryKey, amount]) => {
       const category = categories[categoryKey] || categories.other;

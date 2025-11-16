@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { TouchableOpacity, View, Text, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 import googleAuthService from '../services/googleAuthService';
 import { useAuth } from '../context/AuthContext';
@@ -11,7 +10,7 @@ const GoogleSignInButton = ({
   disabled = false, 
   style = {},
   textStyle = {},
-  mode = 'signin' // 'signin', 'link', 'unlink'
+  mode = 'signin'
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { login, getAuthHeader, updateUser } = useAuth();
@@ -26,7 +25,6 @@ const GoogleSignInButton = ({
 
       switch (mode) {
         case 'signin':
-          // Trigger OAuth and get the result
           result = await googleAuthService.signIn();
           break;
         case 'link':
@@ -45,7 +43,6 @@ const GoogleSignInButton = ({
 
       if (result.success) {
         if (mode === 'signin') {
-          // Process the login with received token and user
           if (result.token && result.user) {
             await login(result.user, result.token);
             console.log('Login saved, calling onSuccess');
@@ -54,14 +51,12 @@ const GoogleSignInButton = ({
             throw new Error('No token or user data received');
           }
         } else if (mode === 'link') {
-          // Handle account linking
           if (result.data?.user) {
             await updateUser(result.data.user);
           }
           Alert.alert('Success', 'Google account linked successfully');
           onSuccess?.(result);
         } else if (mode === 'unlink') {
-          // Handle account unlinking
           if (result.data?.user) {
             await updateUser(result.data.user);
           }

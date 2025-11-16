@@ -7,25 +7,25 @@ import {
   StatusBar,
   RefreshControl,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { transactionAPI } from '../services/api';
 import { getCategoriesMap } from '../constants/categories';
-import { Card, Button, EmptyState } from '../components/common';
+import { Button, EmptyState } from '../components/common';
 import { TransactionItem } from '../components/transactions';
 import { formatCurrency } from '../utils/analitics';
 
 const TransactionsScreen = ({ navigation }) => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState("all");
   const [sortBy, setSortBy] = useState("date");
 
   const categories = getCategoriesMap();
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchTransactions();
   }, []);
 
@@ -49,12 +49,10 @@ const TransactionsScreen = ({ navigation }) => {
       Alert.alert('Error', 'Failed to load transactions');
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
   const onRefresh = React.useCallback(() => {
-    setRefreshing(true);
     fetchTransactions();
   }, []);
 
@@ -183,10 +181,15 @@ const TransactionsScreen = ({ navigation }) => {
       {/* Transactions List */}
       <ScrollView
         className="flex-1 px-6"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        {filteredTransactions.length > 0 ? (
+        {loading ? (
+          <View className="flex-1 items-center justify-center py-20">
+            <ActivityIndicator size="large" color="#3B82F6" />
+            <Text className="text-gray-600 mt-4">Loading transactions...</Text>
+          </View>
+        ) : filteredTransactions.length > 0 ? (
           <>
             <Text className="text-gray-600 text-sm mb-4">
               Showing {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}

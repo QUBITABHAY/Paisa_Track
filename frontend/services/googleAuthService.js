@@ -1,53 +1,31 @@
 import * as WebBrowser from 'expo-web-browser';
-import { Platform } from 'react-native';
 
-// Complete the auth session for web
 WebBrowser.maybeCompleteAuthSession();
 
 class GoogleAuthService {
   constructor() {
-    // Backend API URL
     this.apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
     this.appScheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'paisatrack';
   }
 
-  // Get the OAuth URL from backend
   getGoogleAuthUrl() {
-    // Add mobile=true parameter to ensure backend redirects to app scheme
     return `${this.apiUrl}/api/auth/google?mobile=true`;
   }
 
-  // Perform Google sign-in using backend Passport.js
   async signIn() {
     try {
-      console.log('Starting Google OAuth with backend...');
-      console.log('Auth URL:', this.getGoogleAuthUrl());
-      console.log('Redirect URL:', `${this.appScheme}://auth/callback`);
-      
-      // Open the backend's Google OAuth endpoint in browser
-      // The redirect URI tells the browser where to return after OAuth
       const result = await WebBrowser.openAuthSessionAsync(
         this.getGoogleAuthUrl(),
         `${this.appScheme}://auth/callback`,
         {
-          // Automatically dismiss browser when redirect happens
           dismissButtonStyle: 'close',
           showInRecents: false,
         }
       );
 
-      console.log('OAuth result:', result);
-      console.log('OAuth result type:', result.type);
-
-      // When result.type is 'success', it means the browser captured the redirect
-      // The URL will contain our token and user data
       if (result.type === 'success') {
         const { url } = result;
-        console.log('Success URL:', url);
-        
-        // Extract params from the returned URL
         const params = this.extractParamsFromUrl(url);
-        console.log('Extracted params:', params);
 
         if (params.token && params.user) {
           return {
@@ -86,12 +64,10 @@ class GoogleAuthService {
     }
   }
 
-  // Extract parameters from callback URL
   extractParamsFromUrl(url) {
     const params = {};
     const urlObj = new URL(url);
-    
-    // Get parameters from query string
+
     urlObj.searchParams.forEach((value, key) => {
       params[key] = value;
     });
@@ -99,10 +75,8 @@ class GoogleAuthService {
     return params;
   }
 
-  // Complete Google sign-in process (uses backend Passport.js)
   async completeSignIn() {
     try {
-      // The backend handles everything through Passport.js
       const result = await this.signIn();
       
       if (result.success) {
@@ -123,19 +97,11 @@ class GoogleAuthService {
     }
   }
 
-  // Alternative method: Polling for auth completion (for platforms where deep linking is complex)
   async signInWithPolling() {
     try {
-      console.log('Starting Google OAuth with polling...');
-      
-      // Open the backend's Google OAuth endpoint
       const authWindow = await WebBrowser.openBrowserAsync(
         this.getGoogleAuthUrl()
       );
-
-      // Note: For polling to work, you'd need a backend endpoint 
-      // to check auth status. This is a simplified version.
-      // In production, implement proper deep linking instead.
       
       return {
         success: false,
@@ -150,13 +116,8 @@ class GoogleAuthService {
     }
   }
 
-  // Link Google account to existing user
   async linkAccount(userToken) {
     try {
-      console.log('Linking Google account...');
-      
-      // For linking, we need to pass the current user's token and mobile parameter
-      // Open OAuth with a state parameter containing the token
       const authUrl = `${this.apiUrl}/api/auth/google?mobile=true&state=${encodeURIComponent(JSON.stringify({ mode: 'link', token: userToken }))}`;
       
       const result = await WebBrowser.openAuthSessionAsync(
@@ -191,7 +152,6 @@ class GoogleAuthService {
     }
   }
 
-  // Unlink Google account
   async unlinkAccount(userToken) {
     try {
       const response = await fetch(`${this.apiUrl}/api/auth/unlink-google`, {
