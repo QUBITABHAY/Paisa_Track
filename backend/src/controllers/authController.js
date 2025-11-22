@@ -1,102 +1,82 @@
 import { generateToken } from "../utils/jwtUtils.js";
 import { sendSuccess, sendError, sendAuthError } from "../utils/responseUtils.js";
+import axios from "axios";
+import prisma from "../config/db.config.js";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-export const googleAuthSuccess = async (req, res) => {
+export const googleMobileAuth = async (req, res) => {
   try {
-    if (!req.user) {
-      let isMobileApp = false;
-      if (req.query.state) {
-        try {
-          const state = JSON.parse(req.query.state);
-          isMobileApp = state.mobile === true;
-        } catch (e) {
-          console.error('Error parsing state:', e);
-        }
-      }
-      
-      const appScheme = process.env.APP_SCHEME || 'paisatrack';
-      
-      if (isMobileApp) {
-        return res.redirect(`${appScheme}://auth/callback?error=authentication_failed`);
-      }
-      
-      return res.redirect(
-        `${process.env.FRONTEND_URL || "http://localhost:8081"}/login?error=authentication_failed`,
-      );
+    const { code, redirectUri } = req.body;
+
+    if (!code) {
+      return sendAuthError(res, "Authorization code is required");
     }
 
-    const token = generateToken(req.user);
-    const { password, ...userWithoutPassword } = req.user;
+    const tokenResponse = await axios.post("https://oauth2.googleapis.com/token", {
+      code,
+      client_id: process.env.GOOGLE_WEB_CLIENT_ID,
+      client_secret: process.env.GOOGLE_WEB_CLIENT_SECRET,
+      redirect_uri: redirectUri || "",
+      grant_type: "authorization_code",
+    });
 
-    let isMobileApp = false;
-    if (req.query.state) {
-      try {
-        const state = JSON.parse(req.query.state);
-        isMobileApp = state.mobile === true;
-        console.log('Parsed state from OAuth:', state);
-      } catch (e) {
-        console.error('Error parsing state:', e);
+    const { access_token, id_token } = tokenResponse.data;
+
+    const userResponse = await axios.get("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    });
+
+    const profile = userResponse.data;
+
+    let user = await prisma.users.findUnique({
+      where: { googleId: profile.id },
+    });
+
+    if (!user) {
+      user = await prisma.users.findUnique({
+        where: { email: profile.email },
+      });
+
+      if (user) {
+        user = await prisma.users.update({
+          where: { id: user.id },
+          data: {
+            googleId: profile.id,
+            provider: "google",
+            avatar: profile.picture || null,
+            emailVerified: true,
+          },
+        });
+      } else {
+        user = await prisma.users.create({
+          data: {
+            googleId: profile.id,
+            email: profile.email,
+            username: profile.name,
+            avatar: profile.picture || null,
+            provider: "google",
+            emailVerified: true,
+            password: null,
+          },
+        });
       }
     }
-    
-    const appScheme = process.env.APP_SCHEME || 'paisatrack';
-    
-    console.log('OAuth Success - isMobileApp:', isMobileApp, 'State:', req.query.state);
-    
-    if (isMobileApp) {
-      const callbackUrl = `${appScheme}://auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(userWithoutPassword))}`;
-      console.log('Redirecting to mobile app:', callbackUrl);
-      return res.redirect(callbackUrl);
-    }
 
-    // For web, redirect to frontend
-    res.redirect(
-      `${process.env.FRONTEND_URL || "http://localhost:8081"}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(userWithoutPassword))}`,
-    );
+    const token = generateToken(user);
+    const { password, ...userWithoutPassword } = user;
+
+    return sendSuccess(res, 200, "Authentication successful", {
+      token,
+      user: userWithoutPassword,
+    });
+
   } catch (error) {
-    console.error("Google auth success error:", error);
-    let isMobileApp = false;
-    if (req.query.state) {
-      try {
-        const state = JSON.parse(req.query.state);
-        isMobileApp = state.mobile === true;
-      } catch (e) {
-        console.error('Error parsing state:', e);
-      }
-    }
-    
-    const appScheme = process.env.APP_SCHEME || 'paisatrack';
-    
-    if (isMobileApp) {
-      return res.redirect(`${appScheme}://auth/callback?error=server_error`);
-    }
-    
-    res.redirect(
-      `${process.env.FRONTEND_URL || "http://localhost:8081"}/login?error=server_error`,
-    );
-  }
-};export const googleAuthFailure = (req, res) => {
-  let isMobileApp = false;
-  if (req.query.state) {
-    try {
-      const state = JSON.parse(req.query.state);
-      isMobileApp = state.mobile === true;
-    } catch (e) {
-      console.error('Error parsing state:', e);
-    }
-  }
-  
-  const appScheme = process.env.APP_SCHEME || 'paisatrack';
-  
-  if (isMobileApp) {
-    res.redirect(`${appScheme}://auth/callback?error=google_auth_failed`);
-  } else {
-    res.redirect(
-      `${process.env.FRONTEND_URL || "http://localhost:8081"}/login?error=google_auth_failed`,
-    );
+    console.error("Google mobile auth error:", error?.response?.data || error.message);
+    return sendError(res, 500, "Google authentication failed");
   }
 };
 
@@ -135,24 +115,5 @@ export const getCurrentUser = (req, res) => {
       success: false,
       message: "Not authenticated",
     });
-  }
-};
-
-export const googleAuthCallback = async (req, res) => {
-  try {
-    if (!req.user) {
-      return sendAuthError(res, "Authentication failed");
-    }
-
-    const token = generateToken(req.user);
-    const { password, ...userWithoutPassword } = req.user;
-
-    return sendSuccess(res, 200, "Authentication successful", {
-      token,
-      user: userWithoutPassword,
-    });
-  } catch (error) {
-    console.error("Google auth callback error:", error);
-    return sendError(res, 500, "Internal server error");
   }
 };
