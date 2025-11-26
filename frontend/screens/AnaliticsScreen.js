@@ -26,7 +26,6 @@ import {
 } from '../utils/analitics';
 
 const AnalyticsScreen = ({ navigation }) => {
-  const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,7 +37,7 @@ const AnalyticsScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const data = await transactionAPI.getAll();
-      const transformed = data.map(t => ({
+      const transformed = data.data.map(t => ({
         id: t.id,
         title: t.description,
         amount: parseFloat(t.amount),
@@ -50,7 +49,6 @@ const AnalyticsScreen = ({ navigation }) => {
       
       setTransactions(transformed);
     } catch (error) {
-      console.error('Error fetching transactions:', error);
       Alert.alert('Error', 'Failed to load transactions');
     } finally {
       setLoading(false);
@@ -67,28 +65,6 @@ const AnalyticsScreen = ({ navigation }) => {
   const topCategories = getTopSpendingCategories(currentMonthTransactions, 5);
   const monthComparison = compareMonthOverMonth(transactions);
   const monthlyTrend = getMonthlySpendingTrend(transactions, 6);
-
-  const PeriodSelector = () => (
-    <View className="flex-row bg-gray-100 rounded-xl p-1 mb-6">
-      {['week', 'month', 'year'].map((period) => (
-        <TouchableOpacity
-          key={period}
-          onPress={() => setSelectedPeriod(period)}
-          className={`flex-1 py-2 rounded-lg ${
-            selectedPeriod === period ? 'bg-white shadow-sm' : 'bg-transparent'
-          }`}
-        >
-          <Text
-            className={`text-center font-semibold capitalize ${
-              selectedPeriod === period ? 'text-blue-600' : 'text-gray-600'
-            }`}
-          >
-            {period}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
 
   const OverviewCard = () => (
     <Card className="mb-4">
@@ -372,7 +348,6 @@ const AnalyticsScreen = ({ navigation }) => {
           </View>
         ) : (
           <>
-            <PeriodSelector />
             <OverviewCard />
             <SavingsRateCard />
             <TopCategoriesCard />

@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 /**
  * Get stored auth token
@@ -30,14 +30,19 @@ const apiRequest = async (endpoint, options = {}) => {
     },
   };
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-  const data = await response.json();
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+    const data = await response.json();
 
-  if (!response.ok) {
-    throw new Error(data.message || 'Something went wrong');
+    if (!response.ok) {
+      throw new Error(data.message || 'Something went wrong');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('API Error:', error);
+    throw error;
   }
-
-  return data;
 };
 
 /**

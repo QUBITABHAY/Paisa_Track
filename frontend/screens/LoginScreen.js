@@ -16,7 +16,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import GoogleSignInButton from '../components/GoogleSignInButton';
+// import GoogleSignInButton from '../components/GoogleSignInButton';
+import { userAPI } from '../services/api';
 
 const LoginScreen = ({ navigation }) => {
   const [username, setUsername] = useState("");
@@ -51,25 +52,10 @@ const LoginScreen = ({ navigation }) => {
     setIsLoading(true);
 
     try {
-      const API_URL = "http://localhost:3000/api/user/login";
-
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: username,
-          password: password,
-        }),
-      });
-
-      const data = await response.json();
+      const data = await userAPI.login(username, password);
       setIsLoading(false);
 
       if (data.success) {
-        console.log("Login successful:", data.data.user);
-        
         await AsyncStorage.setItem('auth_token', data.data.token || 'token_placeholder');
         await AsyncStorage.setItem('auth_user', JSON.stringify(data.data.user));
         
@@ -84,10 +70,9 @@ const LoginScreen = ({ navigation }) => {
       }
     } catch (error) {
       setIsLoading(false);
-      console.error("Login error:", error);
       Alert.alert(
         "Error",
-        "Network error. Please check your connection and try again."
+        error.message || "Network error. Please check your connection and try again."
       );
     }
   };
@@ -96,7 +81,7 @@ const LoginScreen = ({ navigation }) => {
     <SafeAreaView className="flex-1 bg-blue-50">
       <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "android" ? "padding" : "height"}
         className="flex-1"
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -229,16 +214,16 @@ const LoginScreen = ({ navigation }) => {
               </TouchableOpacity>
 
               {/* Divider */}
-              <View className="flex-row items-center my-6">
+              {/* <View className="flex-row items-center my-6">
                 <View className="flex-1 h-px bg-gray-300" />
                 <Text className="mx-4 text-gray-500 text-sm font-medium">
                   OR
                 </Text>
                 <View className="flex-1 h-px bg-gray-300" />
-              </View>
+              </View> */}
 
               {/* Google Sign In Button */}
-              <GoogleSignInButton
+              {/* <GoogleSignInButton
                 mode="signin"
                 onSuccess={(result) => {
                   console.log('Google sign-in successful, navigating to Dashboard');
@@ -247,7 +232,7 @@ const LoginScreen = ({ navigation }) => {
                 onError={(error) => {
                   console.error('Google sign-in error:', error);
                 }}
-              />
+              /> */}
 
               {/* Sign Up */}
               <View className="flex-row justify-center mt-6">

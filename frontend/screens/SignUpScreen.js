@@ -16,7 +16,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import GoogleSignInButton from '../components/GoogleSignInButton';
+// import GoogleSignInButton from '../components/GoogleSignInButton';
+import { userAPI } from '../services/api';
 
 const SignUpScreen = ({ navigation }) => {
   const [username, setUsername] = useState("");
@@ -27,7 +28,6 @@ const SignUpScreen = ({ navigation }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const screenHeight = Dimensions.get("window").height;
 
   const validateForm = () => {
     const newErrors = {};
@@ -66,21 +66,7 @@ const SignUpScreen = ({ navigation }) => {
     setIsLoading(true);
 
     try {
-      const API_URL = "http://localhost:3000/api/user/register";
-
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: username,
-          email: email,
-          password: password,
-        }),
-      });
-
-      const data = await response.json();
+      const data = await userAPI.register(username, email, password);
       setIsLoading(false);
 
       if (data.success) {
@@ -99,7 +85,7 @@ const SignUpScreen = ({ navigation }) => {
     } catch (error) {
       setIsLoading(false);
       console.error("Registration error:", error);
-      Alert.alert("Error", "Network error. Please try again later.");
+      Alert.alert("Error", error.message || "Network error. Please try again later.");
     }
   };
 
@@ -108,7 +94,7 @@ const SignUpScreen = ({ navigation }) => {
       <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "android" ? "padding" : "height"}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView
@@ -306,16 +292,16 @@ const SignUpScreen = ({ navigation }) => {
                 </View>
               </TouchableOpacity>
 
-              <View className="flex-row items-center my-4">
+              {/* <View className="flex-row items-center my-4">
                 <View className="flex-1 h-px bg-gray-300" />
                 <Text className="mx-4 text-gray-500 text-sm font-medium">
                   OR
                 </Text>
                 <View className="flex-1 h-px bg-gray-300" />
-              </View>
+              </View> */}
 
               {/* Google Sign In Button */}
-              <GoogleSignInButton
+              {/* <GoogleSignInButton
                 mode="signin"
                 onSuccess={(result) => {
                   console.log('Google sign-up successful, navigating to Dashboard');
@@ -324,7 +310,7 @@ const SignUpScreen = ({ navigation }) => {
                 onError={(error) => {
                   console.error('Google sign-up error:', error);
                 }}
-              />
+              /> */}
               
               <View className="flex-row justify-center mt-4">
                 <Text className="text-gray-600 text-base">

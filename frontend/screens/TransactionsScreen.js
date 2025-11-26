@@ -33,7 +33,7 @@ const TransactionsScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const data = await transactionAPI.getAll();
-      const transformed = data.map(t => ({
+      const transformed = data.data.map(t => ({
         id: t.id,
         title: t.description,
         amount: parseFloat(t.amount),

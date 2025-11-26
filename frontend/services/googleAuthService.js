@@ -1,10 +1,7 @@
-import * as WebBrowser from 'expo-web-browser';
-
-WebBrowser.maybeCompleteAuthSession();
-
 class GoogleAuthService {
   constructor() {
-    this.apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+    this.apiUrl =
+      process.env.EXPO_PUBLIC_API_URL;
     this.appScheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'paisatrack';
   }
 
@@ -12,56 +9,44 @@ class GoogleAuthService {
     return `${this.apiUrl}/api/auth/google?mobile=true`;
   }
 
-  async signIn() {
+  async exchangeCodeForToken(code, redirectUri) {
     try {
-      const result = await WebBrowser.openAuthSessionAsync(
-        this.getGoogleAuthUrl(),
-        `${this.appScheme}://auth/callback`,
-        {
-          dismissButtonStyle: 'close',
-          showInRecents: false,
-        }
-      );
+      const response = await fetch(`${this.apiUrl}/api/auth/google-mobile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code,
+          redirectUri: redirectUri || `${this.appScheme}://auth/callback`
+        }),
+      });
 
-      if (result.type === 'success') {
-        const { url } = result;
-        const params = this.extractParamsFromUrl(url);
+      const data = await response.json();
 
-        if (params.token && params.user) {
-          return {
-            success: true,
-            token: params.token,
-            user: typeof params.user === 'string' ? JSON.parse(decodeURIComponent(params.user)) : params.user
-          };
-        } else if (params.error) {
-          return {
-            success: false,
-            error: params.error
-          };
-        } else {
-          return {
-            success: false,
-            error: 'No authentication data received'
-          };
-        }
-      } else if (result.type === 'cancel') {
+      if (data.success) {
         return {
-          success: false,
-          error: 'User cancelled the sign-in process'
+          success: true,
+          token: data.data.token,
+          user: data.data.user,
         };
       } else {
         return {
           success: false,
-          error: 'Authentication failed'
+          error: data.message || 'Authentication failed',
         };
       }
     } catch (error) {
-      console.error('Google Sign-In Error:', error);
+      console.error('Exchange code error:', error);
       return {
         success: false,
-        error: error.message || 'An unexpected error occurred'
+        error: error.message || 'Network error',
       };
     }
+  }
+
+  async signIn() {
+    return { success: false, error: 'Deprecated' };
   }
 
   extractParamsFromUrl(url) {
@@ -78,7 +63,7 @@ class GoogleAuthService {
   async completeSignIn() {
     try {
       const result = await this.signIn();
-      
+
       if (result.success) {
         return {
           success: true,
@@ -102,7 +87,7 @@ class GoogleAuthService {
       const authWindow = await WebBrowser.openBrowserAsync(
         this.getGoogleAuthUrl()
       );
-      
+
       return {
         success: false,
         error: 'Please use deep linking for OAuth. See documentation.'
@@ -119,7 +104,7 @@ class GoogleAuthService {
   async linkAccount(userToken) {
     try {
       const authUrl = `${this.apiUrl}/api/auth/google?mobile=true&state=${encodeURIComponent(JSON.stringify({ mode: 'link', token: userToken }))}`;
-      
+
       const result = await WebBrowser.openAuthSessionAsync(
         authUrl,
         `${this.appScheme}://auth/callback`
@@ -127,13 +112,13 @@ class GoogleAuthService {
 
       if (result.type === 'success') {
         const params = this.extractParamsFromUrl(result.url);
-        
+
         if (params.error) {
           return { success: false, error: params.error };
         }
 
-        return { 
-          success: true, 
+        return {
+          success: true,
           message: 'Google account linked successfully',
           data: params.user ? { user: JSON.parse(decodeURIComponent(params.user)) } : null
         };

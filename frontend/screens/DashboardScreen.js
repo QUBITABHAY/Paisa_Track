@@ -6,14 +6,12 @@ import {
   TouchableOpacity,
   RefreshControl,
   StatusBar,
-  Dimensions,
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  calculateTotalIncome,
   calculateTotalExpenses,
   calculateNetBalance,
   getCurrentMonthTransactions,
@@ -72,7 +70,6 @@ const DashboardScreen = ({ navigation }) => {
   };
 
   const currentMonthTransactions = getCurrentMonthTransactions(transactions);
-  const totalIncome = calculateTotalIncome(currentMonthTransactions);
   const totalExpenses = calculateTotalExpenses(currentMonthTransactions);
   const netBalance = calculateNetBalance(currentMonthTransactions);
   const monthComparison = compareMonthOverMonth(transactions);
@@ -154,24 +151,12 @@ const DashboardScreen = ({ navigation }) => {
           </View>
 
           {/* Balance Card */}
-          <View className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-3xl p-6 shadow-lg">
-            <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-black opacity-90 text-sm font-medium">Total Balance</Text>
-            </View>
-            <Text className="text-black text-3xl font-bold mb-2">
-              {formatCurrency(netBalance)}
-            </Text>
-            <View className="flex-row items-center">
-              <Ionicons 
-                name={monthComparison.change.balance >= 0 ? "trending-up" : "trending-down"} 
-                size={16} 
-                color={monthComparison.change.balance >= 0 ? "green" : "red"} 
-              />
-              <Text className={`text-sm ml-1 font-medium ${monthComparison.change.balance >= 0 ? 'text-green-900' : 'text-red-900'}`}>
-                {monthComparison.change.balance >= 0 ? '+' : ''}{monthComparison.change.balance.toFixed(1)}% from last month
-              </Text>
-            </View>
-          </View>
+          <BalanceCard 
+            balance={netBalance} 
+            trend={monthComparison.change.balance}
+            trendPercentage={monthComparison.change.balance.toFixed(1)}
+            formatCurrency={formatCurrency}
+          />
         </View>
 
         {/* Stats Cards */}
@@ -240,27 +225,10 @@ const DashboardScreen = ({ navigation }) => {
         {/* Category Breakdown */}
         <View className="px-6 mb-8">
           <Text className="text-lg font-bold text-gray-800 mb-4">Spending by Category</Text>
-          <View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            {categoryBreakdown.length > 0 ? categoryBreakdown.map((category, index) => (
-              <View key={index} className="mb-4 last:mb-0">
-                <View className="flex-row items-center justify-between mb-2">
-                  <Text className="font-semibold text-gray-800">{category.name}</Text>
-                  <Text className="text-gray-600">{formatCurrency(category.amount)}</Text>
-                </View>
-                <View className="bg-gray-200 rounded-full h-2">
-                  <View
-                    className="h-2 rounded-full"
-                    style={{
-                      width: `${category.percentage}%`,
-                      backgroundColor: category.color,
-                    }}
-                  />
-                </View>
-              </View>
-            )) : (
-              <Text className="text-gray-400 text-center py-4">No spending data available</Text>
-            )}
-          </View>
+          <CategoryBreakdown 
+            categories={categoryBreakdown} 
+            formatCurrency={formatCurrency}
+          />
         </View>
       </ScrollView>
 

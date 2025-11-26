@@ -12,7 +12,7 @@ const BalanceCard = ({
   trendPercentage,
   formatCurrency 
 }) => (
-  <View className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-3xl p-6 shadow-lg">
+  <View className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-3xl p-6">
     <View className="flex-row items-center justify-between mb-4">
       <Text className="text-black opacity-90 text-sm font-medium">Total Balance</Text>
       <Ionicons name="eye-outline" size={20} color="black" />
